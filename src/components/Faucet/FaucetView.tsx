@@ -2,14 +2,15 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useWallet } from "@suiet/wallet-kit";
-import { createFaucetTx } from "@/services/suiLfgService";
+import { createFaucetTx, getOnChainUsdcBalance } from "@/services/suiLfgService";
+import { UserService } from "@/services/supabaseService";
 import { useAppStore } from "@/stores/useAppStore";
 import toast from "react-hot-toast";
 import { ArrowLeft, Coins } from "lucide-react";
 
 export function FaucetView() {
   const { connected, signAndExecuteTransactionBlock } = useWallet();
-  const { setCurrentView, hasClaimedToday, setHasClaimedToday, usdcBalance, setUsdcBalance, lastClaimTimestamp, setLastClaimTimestamp } = useAppStore();
+  const { setCurrentView, hasClaimedToday, setHasClaimedToday, usdcBalance, setUsdcBalance, lastClaimTimestamp, setLastClaimTimestamp, user, walletAddress } = useAppStore();
   const [isClaimLoading, setIsClaimLoading] = useState(false);
   const [timeUntilNextClaim, setTimeUntilNextClaim] = useState("00:00:00");
 
@@ -99,9 +100,37 @@ export function FaucetView() {
         const digest = (result as any).digest || (result as any).transactionDigest;
         console.log("Faucet claim successful with digest:", digest);
 
+        // --- START OF NEW LOGIC ---
+        // 1. Fetch the user's NEW on-chain balance after the claim
+        if (user && walletAddress) {
+          try {
+            const onChainBalance = await getOnChainUsdcBalance(walletAddress);
+            console.log("New on-chain balance:", onChainBalance);
+
+            // 2. Update the balance in our Supabase database
+            const updatedUser = await UserService.updateUserBalance(user.id, onChainBalance);
+
+            // 3. Update the application's global state to refresh the UI
+            if (updatedUser) {
+              setUsdcBalance(onChainBalance);
+              console.log("Balance synced successfully");
+            } else {
+              console.warn("Failed to update balance in database, using local update");
+              setUsdcBalance(usdcBalance + 1000);
+            }
+          } catch (error) {
+            console.error("Error syncing balance:", error);
+            // Fallback to local update if sync fails
+            setUsdcBalance(usdcBalance + 1000);
+          }
+        } else {
+          // Fallback if user/wallet not available
+          setUsdcBalance(usdcBalance + 1000);
+        }
+        // --- END OF NEW LOGIC ---
+
         // If successful, update our local state to start the 24h cooldown
         const now = Date.now();
-        setUsdcBalance(usdcBalance + 1000);
         setHasClaimedToday(true);
         setLastClaimTimestamp(now);
         

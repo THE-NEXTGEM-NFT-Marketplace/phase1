@@ -66,3 +66,21 @@ export async function getUserUsdcCoins(walletAddress: string) {
     return [];
   }
 }
+
+// --- GET USER'S TOTAL USDC BALANCE ---
+export async function getOnChainUsdcBalance(walletAddress: string): Promise<number> {
+  try {
+    const coins = await getUserUsdcCoins(walletAddress);
+    
+    // Sum up all USDC coin balances
+    const totalBalance = coins.reduce((total, coin) => {
+      return total + parseInt(coin.balance);
+    }, 0);
+    
+    // Convert from smallest unit to USDC (assuming 6 decimals)
+    return totalBalance / 1_000_000;
+  } catch (error) {
+    console.error('Error fetching on-chain USDC balance:', error);
+    return 0;
+  }
+}

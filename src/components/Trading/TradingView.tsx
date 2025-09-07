@@ -38,18 +38,33 @@ export function TradingView() {
     };
   }, [currentMarket, isSubscribed, updateCurrentMarket]);
 
-  if (!currentMarket) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">No market selected</p>
-      </div>
-    );
-  }
-
   const handleBackToMarkets = () => {
     setCurrentMarket(null);
     setCurrentView('markets');
   };
+
+  if (!currentMarket) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">No market selected</p>
+        <Button onClick={handleBackToMarkets} className="mt-4">
+          Back to Markets
+        </Button>
+      </div>
+    );
+  }
+
+  // Additional safety check for incomplete market data
+  if (!currentMarket.title || !currentMarket.description) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">Loading market details...</p>
+        <Button onClick={handleBackToMarkets} className="mt-4">
+          Back to Markets
+        </Button>
+      </div>
+    );
+  }
 
   const handleGovernanceClick = () => {
     setCurrentView('governance');

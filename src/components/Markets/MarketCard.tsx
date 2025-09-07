@@ -14,7 +14,7 @@ interface MarketCardProps {
 export function MarketCard({ market, onClick }: MarketCardProps) {
   const getStatusVariant = (status: Market['status']) => {
     switch (status) {
-      case 'OPEN':
+      case 'TRADING':
         return 'bg-status-open/10 text-status-open border-status-open/20';
       case 'RESOLVING':
         return 'bg-status-resolving/10 text-status-resolving border-status-resolving/20';
