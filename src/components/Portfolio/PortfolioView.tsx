@@ -7,7 +7,10 @@ import { TrendingUp, TrendingDown } from 'lucide-react';
 export function PortfolioView() {
   const { positions, markets, usdcBalance, setCurrentView, setCurrentMarket } = useAppStore();
 
-  const totalPortfolioValue = positions.reduce((total, position) => {
+  // Add null check for positions to prevent crashes
+  const safePositions = positions || [];
+
+  const totalPortfolioValue = safePositions.reduce((total, position) => {
     const market = markets.find(m => m.id === position.marketId);
     if (!market) return total;
     
@@ -15,7 +18,7 @@ export function PortfolioView() {
     return total + (position.shares * currentPrice);
   }, 0);
 
-  const totalInvested = positions.reduce((total, position) => {
+  const totalInvested = safePositions.reduce((total, position) => {
     return total + (position.shares * position.avgPrice);
   }, 0);
 
@@ -96,11 +99,16 @@ export function PortfolioView() {
           <CardTitle>Open Positions</CardTitle>
         </CardHeader>
         <CardContent>
-          {positions.length === 0 ? (
+          {!safePositions || safePositions.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">No open positions</p>
+              <p className="text-muted-foreground">
+                {safePositions ? 'No open positions' : 'Loading positions...'}
+              </p>
               <p className="text-sm text-muted-foreground mt-2">
-                Start trading in the markets to see your positions here
+                {safePositions 
+                  ? 'Start trading in the markets to see your positions here'
+                  : 'Please wait while we load your portfolio data'
+                }
               </p>
             </div>
           ) : (
@@ -118,7 +126,7 @@ export function PortfolioView() {
                   </tr>
                 </thead>
                 <tbody>
-                  {positions.map((position, index) => {
+                  {safePositions.map((position, index) => {
                     const market = markets.find(m => m.id === position.marketId);
                     if (!market) return null;
 
