@@ -1,0 +1,5 @@
+export const PACKAGE_ID = "0x028f27440a61bde828462e6269cad18a19da70fd8596a7e9499687d799c1eee4";
+export const FAUCET_POOL_ID = "0x6a4401d7c6456d80ad7adafd5538e6cde744dc3cf63602119e8b8e6f7f3e445c";
+export const TREASURY_CAP_ID = "0x4f1f1af852bbfd4d78b1562ec16b3b9622a3061cd8a75a11505c5a86280070b6";
+export const CLOCK_ID = "0x6";
+export const USDC_COIN_TYPE = "0x028f27440a61bde828462e6269cad18a19da70fd8596a7e9499687d799c1eee4::suilfg_testnet_v1::SUI_LFG_USDC";
