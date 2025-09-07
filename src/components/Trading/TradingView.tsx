@@ -100,7 +100,7 @@ export function TradingView() {
               Resolution: {format(currentMarket.resolutionDate, 'MMM d, yyyy')}
             </span>
             <span className="text-sm text-muted-foreground">
-              Volume: ${((currentMarket.totalVolume || 0) / 1000).toFixed(0)}k
+              Volume: ${(((currentMarket.totalVolume ?? 0) as number) / 1000).toFixed(0)}k
             </span>
           </div>
         </div>
@@ -122,7 +122,7 @@ export function TradingView() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="text-center p-4 bg-secondary/30 rounded-lg">
             <p className="text-sm text-muted-foreground">Total Volume</p>
-            <p className="text-xl font-bold">${currentMarket.totalVolume.toLocaleString()}</p>
+            <p className="text-xl font-bold">${(currentMarket.totalVolume ?? 0).toLocaleString()}</p>
           </div>
           <div className="text-center p-4 bg-secondary/30 rounded-lg">
             <p className="text-sm text-muted-foreground">Resolution Date</p>
@@ -151,7 +151,7 @@ export function TradingView() {
           </div>
         )}
 
-        {currentMarket.status === 'OPEN' && (
+        {currentMarket.status === 'TRADING' && (
           <Button variant="outline" onClick={handleGovernanceClick}>
             <AlertCircle className="w-4 h-4 mr-2" />
             Propose/Dispute Outcome

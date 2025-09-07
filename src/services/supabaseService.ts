@@ -100,79 +100,136 @@ export class UserService {
 
     return count || 0;
   }
+
+  static async updateUserBalance(userId: string, newBalance: number): Promise<User | null> {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update({ offchain_usdc_balance: newBalance })
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error updating user balance:', error.message);
+      return null;
+    }
+  }
 }
 
 // Market Services
 export class MarketService {
   static async fetchMarkets(): Promise<Market[]> {
-    const { data, error } = await supabase
-      .from('markets')
-      .select('*')
-      .eq('status', 'TRADING')
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('markets')
+        .select('*')
+        .eq('status', 'TRADING')
+        .order('resolution_date', { ascending: true }); // Order by resolution date instead
 
-    if (error) {
-      console.error('Error fetching markets:', error);
+      if (error) {
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching markets:', error.message);
       return [];
     }
-
-    return data || [];
   }
 
   static async fetchAllMarkets(): Promise<Market[]> {
-    const { data, error } = await supabase
-      .from('markets')
-      .select('*')
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('markets')
+        .select('*')
+        .order('resolution_date', { ascending: true });
 
-    if (error) {
-      console.error('Error fetching all markets:', error);
+      if (error) {
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching all markets:', error.message);
       return [];
     }
-
-    return data || [];
   }
 
   static async proposeMarket(
     title: string,
     description: string,
-    category: string,
-    resolutionDate: string,
-    proposedBy: string
-  ): Promise<ProposedMarket> {
-    const { data, error } = await supabase
-      .from('proposed_markets')
-      .insert({
-        title,
-        description,
-        category,
-        resolution_date: resolutionDate,
-        proposed_by: proposedBy,
-        status: 'PENDING',
-      })
-      .select()
-      .single();
+    proposerId: string
+  ): Promise<ProposedMarket | null> {
+    try {
+      const { data, error } = await supabase
+        .from('proposed_markets')
+        .insert({
+          title,
+          description,
+          proposer_id: proposerId,
+          status: 'PENDING',
+        })
+        .select()
+        .single();
 
-    if (error) {
-      throw new Error(`Failed to propose market: ${error.message}`);
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error proposing market:', error.message);
+      return null;
     }
-
-    return data;
   }
 
   static async getMarketById(marketId: string): Promise<Market | null> {
-    const { data, error } = await supabase
-      .from('markets')
-      .select('*')
-      .eq('id', marketId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('markets')
+        .select('*')
+        .eq('id', marketId)
+        .single();
 
-    if (error) {
-      console.error('Error fetching market:', error);
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error fetching market:', error.message);
       return null;
     }
+  }
 
-    return data;
+  static async fetchPendingProposals(): Promise<ProposedMarket[]> {
+    try {
+      const { data, error } = await supabase
+        .from('proposed_markets')
+        .select(`
+          *,
+          users (
+            wallet_address
+          )
+        `) // Also fetch the proposer's wallet address!
+        .eq('status', 'PENDING')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching pending proposals:', error.message);
+      return [];
+    }
   }
 }
 
@@ -225,18 +282,35 @@ export class TradingService {
   }
 
   static async getUserPositions(userId: string): Promise<Position[]> {
-    const { data, error } = await supabase
-      .from('positions')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching user positions:', error);
+    // Add a check to prevent running the query with an invalid ID
+    if (!userId) {
+      console.warn("getUserPositions called without a userId.");
       return [];
     }
 
-    return data || [];
+    try {
+      const { data, error } = await supabase
+        .from('positions')
+        .select(`
+          *,
+          markets (
+            title,
+            resolution_date
+          )
+        `) // Join with the markets table to get market titles!
+        .eq('user_id', userId);
+
+      if (error) {
+        // Throw the error to be caught by the caller
+        throw error;
+      }
+
+      return data || []; // Return data or an empty array if data is null
+
+    } catch (error) {
+      console.error("Error fetching user positions:", error.message);
+      return []; // Always return an empty array on failure
+    }
   }
 
   static async getTradeHistory(userId: string): Promise<Trade[]> {

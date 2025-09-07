@@ -3,7 +3,7 @@ import { addDays, addHours } from 'date-fns';
 import { UserService, MarketService, TradingService } from '@/services/supabaseService';
 import { User, Market as SupabaseMarket, Trade, Position as SupabasePosition } from '@/lib/supabaseClient';
 
-export type MarketStatus = 'PROPOSED' | 'OPEN' | 'RESOLVING' | 'RESOLVED';
+export type MarketStatus = 'PROPOSED' | 'TRADING' | 'RESOLVING' | 'RESOLVED';
 export type MarketCategory = 'All' | 'Crypto' | 'Politics' | 'Sports' | 'Community';
 export type Outcome = 'YES' | 'NO';
 
@@ -15,29 +15,29 @@ export interface PricePoint {
 export interface Market {
   id: string;
   title: string;
-  description: string;
-  category: MarketCategory;
+  description: string | null;
   status: MarketStatus;
+  resolution_outcome: string | null;
+  b_parameter: number;
+  total_yes_shares: number;
+  total_no_shares: number;
   resolutionDate: Date;
+  priceHistory: PricePoint[];
+  // Computed properties for frontend
   yesPrice: number;
   noPrice: number;
   totalVolume: number;
-  priceHistory: PricePoint[];
 }
 
 export interface Position {
   marketId: string;
-  outcome: Outcome;
-  shares: number;
-  avgPrice: number;
+  yesShares: number;
+  noShares: number;
 }
 
 export interface ProposeMarketData {
   title: string;
   description: string;
-  category: Exclude<MarketCategory, 'All'>;
-  resolutionDate: Date;
-  initialYesPrice: number;
 }
 
 export interface AppState {
@@ -415,7 +415,21 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Actions
   setCurrentView: (view) => set({ currentView: view }),
   setSelectedCategory: (category) => set({ selectedCategory: category }),
-  setCurrentMarket: (market) => set({ currentMarket: market, currentView: market ? 'trading' : 'markets' }),
+  setCurrentMarket: (market) => {
+    if (market) {
+      // Ensure market has all required fields before setting
+      const completeMarket = {
+        ...market,
+        yesPrice: market.yesPrice || 0,
+        noPrice: market.noPrice || 0,
+        totalVolume: market.totalVolume || 0,
+        priceHistory: market.priceHistory || []
+      };
+      set({ currentMarket: completeMarket, currentView: 'trading' });
+    } else {
+      set({ currentMarket: null, currentView: 'markets' });
+    }
+  },
   setUsdcBalance: (balance) => set({ usdcBalance: balance }),
   setHasClaimedToday: (claimed) => set({ hasClaimedToday: claimed }),
   setLastClaimTimestamp: (ts) => set({ lastClaimTimestamp: ts }),
@@ -453,6 +467,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         user, 
         referralStats,
         walletAddress,
+        usdcBalance: Number(user.offchain_usdc_balance || 0),
         isLoading: false 
       });
     } catch (error) {
@@ -465,24 +480,43 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isLoading: true });
     try {
       const markets = await MarketService.fetchMarkets();
+      
+      // Ensure markets is always an array
+      if (!Array.isArray(markets)) {
+        console.warn('fetchMarkets returned non-array:', markets);
+        set({ markets: [], isLoading: false });
+        return;
+      }
+      
       // Convert Supabase markets to our Market format
-      const convertedMarkets: Market[] = markets.map(m => ({
-        id: m.id,
-        title: m.title,
-        description: m.description,
-        category: m.category as MarketCategory,
-        status: m.status as MarketStatus,
-        resolutionDate: new Date(m.resolution_date),
-        yesPrice: m.yes_price,
-        noPrice: m.no_price,
-        totalVolume: m.total_volume,
-        priceHistory: [] // We'll implement price history separately
-      }));
+      const convertedMarkets: Market[] = markets.map(m => {
+        // Calculate prices using LMSR formula
+        const totalShares = m.total_yes_shares + m.total_no_shares;
+        const yesPrice = totalShares > 0 ? m.total_yes_shares / (m.total_yes_shares + m.total_no_shares) : 0.5;
+        const noPrice = totalShares > 0 ? m.total_no_shares / (m.total_yes_shares + m.total_no_shares) : 0.5;
+        
+        return {
+          id: m.id,
+          title: m.title,
+          description: m.description,
+          status: m.status as MarketStatus,
+          resolution_outcome: m.resolution_outcome,
+          b_parameter: m.b_parameter,
+          total_yes_shares: m.total_yes_shares,
+          total_no_shares: m.total_no_shares,
+          resolutionDate: new Date(m.resolution_date),
+          priceHistory: [], // We'll implement price history separately
+          // Computed properties
+          yesPrice,
+          noPrice,
+          totalVolume: totalShares
+        };
+      });
       
       set({ markets: convertedMarkets, isLoading: false });
     } catch (error) {
       console.error('Failed to load markets:', error);
-      set({ isLoading: false });
+      set({ markets: [], isLoading: false });
     }
   },
 
@@ -492,17 +526,25 @@ export const useAppStore = create<AppState>((set, get) => ({
     
     try {
       const positions = await TradingService.getUserPositions(state.user.id);
+      
+      // Ensure positions is always an array
+      if (!Array.isArray(positions)) {
+        console.warn('getUserPositions returned non-array:', positions);
+        set({ positions: [] });
+        return;
+      }
+      
       // Convert Supabase positions to our Position format
       const convertedPositions: Position[] = positions.map(p => ({
         marketId: p.market_id,
-        outcome: p.outcome as Outcome,
-        shares: p.shares,
-        avgPrice: p.avg_price
+        yesShares: p.yes_shares,
+        noShares: p.no_shares
       }));
       
       set({ positions: convertedPositions });
     } catch (error) {
       console.error('Failed to load user positions:', error);
+      set({ positions: [] });
     }
   },
   
@@ -527,21 +569,20 @@ export const useAppStore = create<AppState>((set, get) => ({
         currentPrice
       );
       
-      // Update local state optimistically
+      // Update local state optimistically using yesShares/noShares
       const updatedPositions = [...state.positions];
-      const existingPosition = updatedPositions.find(p => p.marketId === marketId && p.outcome === outcome);
-      
-      if (existingPosition) {
-        const totalShares = existingPosition.shares + shares;
-        const newAvgPrice = (existingPosition.avgPrice * existingPosition.shares + currentPrice * shares) / totalShares;
-        existingPosition.shares = totalShares;
-        existingPosition.avgPrice = Number(newAvgPrice.toFixed(2));
+      const existing = updatedPositions.find(p => p.marketId === marketId);
+      if (existing) {
+        if (outcome === 'YES') {
+          existing.yesShares = Number((existing.yesShares + shares).toFixed(6));
+        } else {
+          existing.noShares = Number((existing.noShares + shares).toFixed(6));
+        }
       } else {
         updatedPositions.push({
           marketId,
-          outcome,
-          shares,
-          avgPrice: currentPrice
+          yesShares: outcome === 'YES' ? Number(shares.toFixed(6)) : 0,
+          noShares: outcome === 'NO' ? Number(shares.toFixed(6)) : 0,
         });
       }
       
@@ -553,7 +594,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Subscribe to trade updates for real-time feedback
       TradingService.subscribeToTradeUpdates(trade.id, (updatedTrade) => {
         if (updatedTrade.status === 'COMPLETED') {
-          // Trade completed successfully
           console.log('Trade completed:', updatedTrade);
         } else if (updatedTrade.status === 'FAILED') {
           // Trade failed, revert optimistic update
@@ -573,8 +613,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     const state = get();
     if (!state.user) return;
     
-    const position = state.positions.find(p => p.marketId === marketId && p.outcome === outcome);
-    if (!position || sharesToSell > position.shares) return;
+    const position = state.positions.find(p => p.marketId === marketId);
+    if (!position) return;
+    const available = outcome === 'YES' ? position.yesShares : position.noShares;
+    if (sharesToSell > available) return;
     
     const market = state.markets.find(m => m.id === marketId);
     if (!market) return;
@@ -593,16 +635,17 @@ export const useAppStore = create<AppState>((set, get) => ({
         currentPrice
       );
       
-      // Update positions optimistically
-      const updatedPositions = state.positions.map(p => {
-        if (p.marketId === marketId && p.outcome === outcome) {
-          const remainingShares = p.shares - sharesToSell;
-          return remainingShares > 0 
-            ? { ...p, shares: remainingShares }
-            : null;
-        }
-        return p;
-      }).filter(Boolean) as Position[];
+      // Update positions optimistically for yesShares/noShares
+      const updatedPositions = state.positions
+        .map(p => {
+          if (p.marketId !== marketId) return p;
+          return {
+            ...p,
+            yesShares: outcome === 'YES' ? Number((p.yesShares - sharesToSell).toFixed(6)) : p.yesShares,
+            noShares: outcome === 'NO' ? Number((p.noShares - sharesToSell).toFixed(6)) : p.noShares,
+          };
+        })
+        .filter(p => (p.yesShares > 0 || p.noShares > 0));
       
       set({
         usdcBalance: Number((state.usdcBalance + saleAmount).toFixed(2)),
@@ -642,18 +685,19 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!state.user) return;
     
     try {
-      await MarketService.proposeMarket(
+      const result = await MarketService.proposeMarket(
         data.title,
         data.description,
-        data.category,
-        data.resolutionDate.toISOString(),
         state.user.id
       );
       
-      // Refresh markets to show the new proposal
-      await get().loadMarkets();
-      
-      set({ currentView: 'governance' });
+      if (result) {
+        // Refresh markets to show the new proposal
+        await get().loadMarkets();
+        set({ currentView: 'governance' });
+      } else {
+        console.error('Failed to propose market: Service returned null');
+      }
     } catch (error) {
       console.error('Failed to propose market:', error);
     }
