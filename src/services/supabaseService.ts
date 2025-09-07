@@ -116,7 +116,7 @@ export class UserService {
 
       return data;
     } catch (error) {
-      console.error('Error updating user balance:', error.message);
+      console.error('Error updating user balance:', (error as any).message);
       return null;
     }
   }
@@ -138,7 +138,7 @@ export class MarketService {
 
       return data || [];
     } catch (error) {
-      console.error('Error fetching markets:', error.message);
+      console.error('Error fetching markets:', (error as any).message);
       return [];
     }
   }
@@ -156,7 +156,7 @@ export class MarketService {
 
       return data || [];
     } catch (error) {
-      console.error('Error fetching all markets:', error.message);
+      console.error('Error fetching all markets:', (error as any).message);
       return [];
     }
   }
@@ -184,7 +184,7 @@ export class MarketService {
 
       return data;
     } catch (error) {
-      console.error('Error proposing market:', error.message);
+      console.error('Error proposing market:', (error as any).message);
       return null;
     }
   }
@@ -203,7 +203,7 @@ export class MarketService {
 
       return data;
     } catch (error) {
-      console.error('Error fetching market:', error.message);
+      console.error('Error fetching market:', (error as any).message);
       return null;
     }
   }
@@ -227,7 +227,7 @@ export class MarketService {
 
       return data || [];
     } catch (error) {
-      console.error('Error fetching pending proposals:', error.message);
+      console.error('Error fetching pending proposals:', (error as any).message);
       return [];
     }
   }
@@ -235,50 +235,115 @@ export class MarketService {
 
 // Trading Services
 export class TradingService {
-  static async initiateTrade(
+  // Buy shares: updates user balance, positions, and market totals
+  static async buy(
     userId: string,
     marketId: string,
     outcome: 'YES' | 'NO',
-    amount: number,
-    shares: number,
-    price: number
-  ): Promise<Trade> {
-    const { data, error } = await supabase
-      .from('trades')
-      .insert({
-        user_id: userId,
-        market_id: marketId,
-        outcome,
-        amount,
-        shares,
-        price,
-        status: 'PENDING',
-        signature: null,
-      })
-      .select()
+    amount: number
+  ): Promise<{ shares: number; price: number } | null> {
+    // Fetch user and market
+    const { data: user } = await supabase.from('users').select('offchain_usdc_balance').eq('id', userId).single();
+    const { data: market } = await supabase.from('markets').select('*').eq('id', marketId).single();
+    if (!user || !market) return null;
+
+    const totalYes = Number(market.total_yes_shares || 0);
+    const totalNo = Number(market.total_no_shares || 0);
+    const total = totalYes + totalNo;
+    const yesPrice = total > 0 ? totalYes / total : 0.5;
+    const noPrice = total > 0 ? totalNo / total : 0.5;
+    const price = outcome === 'YES' ? yesPrice : noPrice;
+    const shares = amount / price;
+
+    // Update user balance
+    const newBalance = Number(user.offchain_usdc_balance) - amount;
+    await supabase.from('users').update({ offchain_usdc_balance: newBalance }).eq('id', userId);
+
+    // Upsert position
+    const { data: existingPosition } = await supabase
+      .from('positions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('market_id', marketId)
       .single();
 
-    if (error) {
-      throw new Error(`Failed to initiate trade: ${error.message}`);
-    }
+    let nextYes = existingPosition?.yes_shares ? Number(existingPosition.yes_shares) : 0;
+    let nextNo = existingPosition?.no_shares ? Number(existingPosition.no_shares) : 0;
+    if (outcome === 'YES') nextYes += shares; else nextNo += shares;
 
-    return data;
+    await supabase
+      .from('positions')
+      .upsert(
+        [{ user_id: userId, market_id: marketId, yes_shares: nextYes, no_shares: nextNo }],
+        { onConflict: 'user_id,market_id' }
+      );
+
+    // Update market totals
+    const nextTotalYes = outcome === 'YES' ? totalYes + shares : totalYes;
+    const nextTotalNo = outcome === 'NO' ? totalNo + shares : totalNo;
+    await supabase
+      .from('markets')
+      .update({ total_yes_shares: nextTotalYes, total_no_shares: nextTotalNo })
+      .eq('id', marketId);
+
+    return { shares, price };
   }
 
-  static async updateTradeStatus(tradeId: string, status: 'COMPLETED' | 'FAILED', signature?: string): Promise<void> {
-    const updateData: any = { status };
-    if (signature) {
-      updateData.signature = signature;
-    }
+  // Sell shares: updates user balance, positions, and market totals
+  static async sell(
+    userId: string,
+    marketId: string,
+    outcome: 'YES' | 'NO',
+    sharesToSell: number
+  ): Promise<{ proceeds: number; price: number } | null> {
+    const { data: user } = await supabase.from('users').select('offchain_usdc_balance').eq('id', userId).single();
+    const { data: market } = await supabase.from('markets').select('*').eq('id', marketId).single();
+    if (!user || !market) return null;
 
-    const { error } = await supabase
-      .from('trades')
-      .update(updateData)
-      .eq('id', tradeId);
+    const totalYes = Number(market.total_yes_shares || 0);
+    const totalNo = Number(market.total_no_shares || 0);
+    const total = totalYes + totalNo;
+    const yesPrice = total > 0 ? totalYes / total : 0.5;
+    const noPrice = total > 0 ? totalNo / total : 0.5;
+    const price = outcome === 'YES' ? yesPrice : noPrice;
 
-    if (error) {
-      throw new Error(`Failed to update trade status: ${error.message}`);
-    }
+    // Get current position
+    const { data: existingPosition } = await supabase
+      .from('positions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('market_id', marketId)
+      .single();
+    if (!existingPosition) return null;
+
+    const currentYes = Number(existingPosition.yes_shares || 0);
+    const currentNo = Number(existingPosition.no_shares || 0);
+    const available = outcome === 'YES' ? currentYes : currentNo;
+    if (sharesToSell > available) return null;
+
+    // Calculate proceeds and new balance
+    const proceeds = sharesToSell * price;
+    const newBalance = Number(user.offchain_usdc_balance) + proceeds;
+    await supabase.from('users').update({ offchain_usdc_balance: newBalance }).eq('id', userId);
+
+    // Update position
+    const nextYes = outcome === 'YES' ? currentYes - sharesToSell : currentYes;
+    const nextNo = outcome === 'NO' ? currentNo - sharesToSell : currentNo;
+    await supabase
+      .from('positions')
+      .update({ yes_shares: nextYes, no_shares: nextNo })
+      .eq('user_id', userId)
+      .eq('market_id', marketId);
+
+    // Update market totals
+    const nextTotalYes = outcome === 'YES' ? totalYes - sharesToSell : totalYes;
+    const nextTotalNo = outcome === 'NO' ? totalNo - sharesToSell : totalNo;
+    await supabase
+      .from('markets')
+      .update({ total_yes_shares: nextTotalYes, total_no_shares: nextTotalNo })
+      .eq('id', marketId);
+
+    return { proceeds, price };
   }
 
   static async getUserPositions(userId: string): Promise<Position[]> {
@@ -308,7 +373,7 @@ export class TradingService {
       return data || []; // Return data or an empty array if data is null
 
     } catch (error) {
-      console.error("Error fetching user positions:", error.message);
+      console.error("Error fetching user positions:", (error as any).message);
       return []; // Always return an empty array on failure
     }
   }
@@ -326,29 +391,6 @@ export class TradingService {
     }
 
     return data || [];
-  }
-
-  static async subscribeToTradeUpdates(tradeId: string, callback: (trade: Trade) => void): Promise<void> {
-    const subscription = supabase
-      .channel(`trade-${tradeId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'trades',
-          filter: `id=eq.${tradeId}`,
-        },
-        (payload) => {
-          callback(payload.new as Trade);
-        }
-      )
-      .subscribe();
-
-    // Return cleanup function
-    return () => {
-      subscription.unsubscribe();
-    };
   }
 }
 

@@ -556,28 +556,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!market) return;
     
     try {
-      const currentPrice = outcome === 'YES' ? market.yesPrice : market.noPrice;
-      const shares = amount / currentPrice;
-      
-      // Create trade in Supabase
-      const trade = await TradingService.initiateTrade(
-        state.user.id,
-        marketId,
-        outcome,
-        amount,
-        shares,
-        currentPrice
-      );
-      
-      // Update local state optimistically using yesShares/noShares
+      const res = await TradingService.buy(state.user.id, marketId, outcome, amount);
+      if (!res) return;
+      const { shares, price } = res;
+
       const updatedPositions = [...state.positions];
       const existing = updatedPositions.find(p => p.marketId === marketId);
       if (existing) {
-        if (outcome === 'YES') {
-          existing.yesShares = Number((existing.yesShares + shares).toFixed(6));
-        } else {
-          existing.noShares = Number((existing.noShares + shares).toFixed(6));
-        }
+        if (outcome === 'YES') existing.yesShares = Number((existing.yesShares + shares).toFixed(6));
+        else existing.noShares = Number((existing.noShares + shares).toFixed(6));
       } else {
         updatedPositions.push({
           marketId,
@@ -585,25 +572,12 @@ export const useAppStore = create<AppState>((set, get) => ({
           noShares: outcome === 'NO' ? Number(shares.toFixed(6)) : 0,
         });
       }
-      
+
+      // Update local balance from backend value (state.usdcBalance - amount)
       set({
         usdcBalance: Number((state.usdcBalance - amount).toFixed(2)),
         positions: updatedPositions
       });
-      
-      // Subscribe to trade updates for real-time feedback
-      TradingService.subscribeToTradeUpdates(trade.id, (updatedTrade) => {
-        if (updatedTrade.status === 'COMPLETED') {
-          console.log('Trade completed:', updatedTrade);
-        } else if (updatedTrade.status === 'FAILED') {
-          // Trade failed, revert optimistic update
-          set({
-            usdcBalance: state.usdcBalance,
-            positions: state.positions
-          });
-        }
-      });
-      
     } catch (error) {
       console.error('Failed to buy shares:', error);
     }
@@ -622,20 +596,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!market) return;
     
     try {
-      const currentPrice = outcome === 'YES' ? market.yesPrice : market.noPrice;
-      const saleAmount = sharesToSell * currentPrice;
-      
-      // Create trade in Supabase
-      const trade = await TradingService.initiateTrade(
-        state.user.id,
-        marketId,
-        outcome,
-        saleAmount,
-        sharesToSell,
-        currentPrice
-      );
-      
-      // Update positions optimistically for yesShares/noShares
+      const res = await TradingService.sell(state.user.id, marketId, outcome, sharesToSell);
+      if (!res) return;
+      const { proceeds, price } = res;
+
       const updatedPositions = state.positions
         .map(p => {
           if (p.marketId !== marketId) return p;
@@ -648,21 +612,9 @@ export const useAppStore = create<AppState>((set, get) => ({
         .filter(p => (p.yesShares > 0 || p.noShares > 0));
       
       set({
-        usdcBalance: Number((state.usdcBalance + saleAmount).toFixed(2)),
+        usdcBalance: Number((state.usdcBalance + proceeds).toFixed(2)),
         positions: updatedPositions
       });
-      
-      // Subscribe to trade updates
-      TradingService.subscribeToTradeUpdates(trade.id, (updatedTrade) => {
-        if (updatedTrade.status === 'FAILED') {
-          // Trade failed, revert optimistic update
-          set({
-            usdcBalance: state.usdcBalance,
-            positions: state.positions
-          });
-        }
-      });
-      
     } catch (error) {
       console.error('Failed to sell shares:', error);
     }
