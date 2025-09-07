@@ -7,10 +7,11 @@ import { UserService } from "@/services/supabaseService";
 import { useAppStore } from "@/stores/useAppStore";
 import toast from "react-hot-toast";
 import { ArrowLeft, Coins } from "lucide-react";
+import { suiClient } from "@/services/suiClient";
 
 export function FaucetView() {
   const { connected, signAndExecuteTransactionBlock } = useWallet();
-  const { setCurrentView, hasClaimedToday, setHasClaimedToday, usdcBalance, setUsdcBalance, lastClaimTimestamp, setLastClaimTimestamp, user, walletAddress } = useAppStore();
+  const { setCurrentView, hasClaimedToday, setHasClaimedToday, usdcBalance, setUsdcBalance, lastClaimTimestamp, setLastClaimTimestamp, user, walletAddress, setUser } = useAppStore();
   const [isClaimLoading, setIsClaimLoading] = useState(false);
   const [timeUntilNextClaim, setTimeUntilNextClaim] = useState("00:00:00");
 
@@ -100,32 +101,43 @@ export function FaucetView() {
         const digest = (result as any).digest || (result as any).transactionDigest;
         console.log("Faucet claim successful with digest:", digest);
 
+        // Wait for finality before reading balance
+        try {
+          await suiClient.waitForTransactionBlock({ digest });
+        } catch (e) {
+          console.warn("waitForTransactionBlock failed or timed out; proceeding with fallback", e);
+        }
+
         // --- START OF NEW LOGIC ---
-        // 1. Fetch the user's NEW on-chain balance after the claim
+        // 1. Prefer on-chain balance, but robustly fallback to +1000 if query fails
         if (user && walletAddress) {
           try {
             const onChainBalance = await getOnChainUsdcBalance(walletAddress);
             console.log("New on-chain balance:", onChainBalance);
 
+            const fallbackBalance = Number((usdcBalance + 1000).toFixed(2));
+            const nextBalance = onChainBalance > 0 ? onChainBalance : fallbackBalance;
+
             // 2. Update the balance in our Supabase database
-            const updatedUser = await UserService.updateUserBalance(user.id, onChainBalance);
+            const updatedUser = await UserService.updateUserBalance(user.id, nextBalance);
 
             // 3. Update the application's global state to refresh the UI
             if (updatedUser) {
-              setUsdcBalance(onChainBalance);
+              setUsdcBalance(nextBalance);
+              setUser({ ...updatedUser });
               console.log("Balance synced successfully");
             } else {
               console.warn("Failed to update balance in database, using local update");
-              setUsdcBalance(usdcBalance + 1000);
+              setUsdcBalance(nextBalance);
             }
           } catch (error) {
             console.error("Error syncing balance:", error);
             // Fallback to local update if sync fails
-            setUsdcBalance(usdcBalance + 1000);
+            setUsdcBalance(Number((usdcBalance + 1000).toFixed(2)));
           }
         } else {
           // Fallback if user/wallet not available
-          setUsdcBalance(usdcBalance + 1000);
+          setUsdcBalance(Number((usdcBalance + 1000).toFixed(2)));
         }
         // --- END OF NEW LOGIC ---
 
@@ -157,8 +169,6 @@ export function FaucetView() {
   const handleBackToMarkets = () => {
     setCurrentView('markets');
   };
-
-
 
   return (
     <div className="container mx-auto p-6 max-w-2xl">
