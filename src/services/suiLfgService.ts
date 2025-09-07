@@ -1,5 +1,5 @@
 import { TransactionBlock } from '@mysten/sui.js/transactions';
-import { PACKAGE_ID, FAUCET_POOL_ID, TREASURY_CAP_ID, CLOCK_ID, USDC_COIN_TYPE } from '../constants';
+import { PACKAGE_ID, FAUCET_POOL_ID, TREASURY_CAP_ID, CLOCK_ID, USDC_COIN_TYPE } from '@/constants';
 import { suiClient } from './suiClient';
 
 // --- FAUCET ---

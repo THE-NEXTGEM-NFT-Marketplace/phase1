@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAppStore } from '@/stores/useAppStore';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Badge } from '../ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 
 export function PortfolioView() {

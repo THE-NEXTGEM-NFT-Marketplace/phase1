@@ -1,4 +1,4 @@
-import { supabase, User, Market, ProposedMarket, Trade, Position, generateReferralCode } from './supabaseClient';
+import { supabase, User, Market, ProposedMarket, Trade, Position, generateReferralCode } from '@/lib/supabaseClient';
 
 // User Management Services
 export class UserService {
