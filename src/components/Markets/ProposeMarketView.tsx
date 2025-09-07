@@ -32,8 +32,6 @@ export function ProposeMarketView() {
     defaultValues: {
       title: '',
       description: '',
-      category: 'Community',
-      resolutionDate: '',
     },
   });
 
@@ -50,20 +48,9 @@ export function ProposeMarketView() {
     setIsSubmitting(true);
     
     try {
-      // Validate resolution date is in the future
-      const resolutionDate = new Date(data.resolutionDate);
-      if (resolutionDate <= new Date()) {
-        form.setError('resolutionDate', {
-          message: 'Resolution date must be in the future'
-        });
-        return;
-      }
-
       await proposeMarket({
         title: data.title,
         description: data.description,
-        category: data.category,
-        resolutionDate,
       });
 
       toast({
@@ -84,11 +71,6 @@ export function ProposeMarketView() {
       setIsSubmitting(false);
     }
   };
-
-  // Get minimum date (tomorrow)
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const minDate = tomorrow.toISOString().split('T')[0];
 
   return (
     <div className="space-y-6">
@@ -151,50 +133,6 @@ export function ProposeMarketView() {
                   </FormItem>
                 )}
               />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Category</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a category" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Crypto">Crypto</SelectItem>
-                          <SelectItem value="Politics">Politics</SelectItem>
-                          <SelectItem value="Sports">Sports</SelectItem>
-                          <SelectItem value="Community">Community</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="resolutionDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Resolution Date</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          min={minDate}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
 
               {!connected && (
                 <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">

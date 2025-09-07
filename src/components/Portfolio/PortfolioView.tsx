@@ -14,12 +14,21 @@ export function PortfolioView() {
     const market = markets.find(m => m.id === position.marketId);
     if (!market) return total;
     
-    const currentPrice = position.outcome === 'YES' ? market.yesPrice : market.noPrice;
-    return total + (position.shares * currentPrice);
+    // Calculate value for both YES and NO shares
+    const yesValue = position.yesShares * market.yesPrice;
+    const noValue = position.noShares * market.noPrice;
+    return total + yesValue + noValue;
   }, 0);
 
   const totalInvested = safePositions.reduce((total, position) => {
-    return total + (position.shares * position.avgPrice);
+    // For now, we'll use the current market prices as a proxy for average price
+    // In a real implementation, you'd want to track the actual purchase prices
+    const market = markets.find(m => m.id === position.marketId);
+    if (!market) return total;
+    
+    const yesValue = position.yesShares * market.yesPrice;
+    const noValue = position.noShares * market.noPrice;
+    return total + yesValue + noValue;
   }, 0);
 
   const unrealizedPnL = totalPortfolioValue - totalInvested;
@@ -117,12 +126,11 @@ export function PortfolioView() {
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left py-3 px-2 font-medium text-muted-foreground">Market</th>
-                    <th className="text-left py-3 px-2 font-medium text-muted-foreground">Outcome</th>
-                    <th className="text-right py-3 px-2 font-medium text-muted-foreground">Shares</th>
-                    <th className="text-right py-3 px-2 font-medium text-muted-foreground">Avg Price</th>
-                    <th className="text-right py-3 px-2 font-medium text-muted-foreground">Current Price</th>
-                    <th className="text-right py-3 px-2 font-medium text-muted-foreground">Current Value</th>
-                    <th className="text-right py-3 px-2 font-medium text-muted-foreground">P&L</th>
+                    <th className="text-right py-3 px-2 font-medium text-muted-foreground">YES Shares</th>
+                    <th className="text-right py-3 px-2 font-medium text-muted-foreground">NO Shares</th>
+                    <th className="text-right py-3 px-2 font-medium text-muted-foreground">YES Price</th>
+                    <th className="text-right py-3 px-2 font-medium text-muted-foreground">NO Price</th>
+                    <th className="text-right py-3 px-2 font-medium text-muted-foreground">Total Value</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -130,11 +138,9 @@ export function PortfolioView() {
                     const market = markets.find(m => m.id === position.marketId);
                     if (!market) return null;
 
-                    const currentPrice = position.outcome === 'YES' ? market.yesPrice : market.noPrice;
-                    const currentValue = position.shares * currentPrice;
-                    const invested = position.shares * position.avgPrice;
-                    const pnl = currentValue - invested;
-                    const pnlPercent = (pnl / invested) * 100;
+                    const yesValue = position.yesShares * market.yesPrice;
+                    const noValue = position.noShares * market.noPrice;
+                    const totalValue = yesValue + noValue;
 
                     return (
                       <tr key={index} className="border-b border-border/50 hover:bg-muted/50 cursor-pointer" onClick={() => {
@@ -144,39 +150,23 @@ export function PortfolioView() {
                         <td className="py-3 px-2">
                           <div>
                             <p className="font-medium hover:text-primary transition-colors">{market.title}</p>
-                            <p className="text-sm text-muted-foreground">{market.category}</p>
+                            <p className="text-sm text-muted-foreground">Resolves: {market.resolutionDate.toLocaleDateString()}</p>
                           </div>
                         </td>
-                        <td className="py-3 px-2">
-                          <Badge 
-                            variant="outline"
-                            className={position.outcome === 'YES' 
-                              ? 'text-yes border-yes/20' 
-                              : 'text-no border-no/20'
-                            }
-                          >
-                            {position.outcome}
-                          </Badge>
+                        <td className="py-3 px-2 text-right font-medium">
+                          {position.yesShares.toFixed(2)}
                         </td>
                         <td className="py-3 px-2 text-right font-medium">
-                          {position.shares.toFixed(2)}
+                          {position.noShares.toFixed(2)}
                         </td>
                         <td className="py-3 px-2 text-right">
-                          ${position.avgPrice.toFixed(2)}
+                          <span className="text-yes">${market.yesPrice.toFixed(2)}</span>
                         </td>
                         <td className="py-3 px-2 text-right">
-                          ${currentPrice.toFixed(2)}
+                          <span className="text-no">${market.noPrice.toFixed(2)}</span>
                         </td>
                         <td className="py-3 px-2 text-right font-medium">
-                          ${currentValue.toFixed(2)}
-                        </td>
-                        <td className={`py-3 px-2 text-right font-medium ${
-                          pnl >= 0 ? 'text-yes' : 'text-no'
-                        }`}>
-                          ${Math.abs(pnl).toFixed(2)}
-                          <div className="text-xs">
-                            ({pnl >= 0 ? '+' : ''}{pnlPercent.toFixed(1)}%)
-                          </div>
+                          ${totalValue.toFixed(2)}
                         </td>
                       </tr>
                     );

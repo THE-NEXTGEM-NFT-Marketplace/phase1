@@ -15,36 +15,33 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 export interface User {
   id: string;
   wallet_address: string;
+  offchain_usdc_balance: number;
   referral_code: string;
   referred_by: string | null;
   created_at: string;
-  updated_at: string;
 }
 
 export interface Market {
   id: string;
   title: string;
-  description: string;
-  category: string;
+  description: string | null;
   status: 'PROPOSED' | 'TRADING' | 'RESOLVING' | 'RESOLVED';
+  resolution_outcome: string | null;
+  b_parameter: number;
+  total_yes_shares: number;
+  total_no_shares: number;
   resolution_date: string;
-  yes_price: number;
-  no_price: number;
-  total_volume: number;
   created_at: string;
-  updated_at: string;
 }
 
 export interface ProposedMarket {
   id: string;
+  proposer_id: string;
   title: string;
-  description: string;
-  category: string;
-  resolution_date: string;
-  proposed_by: string;
+  description: string | null;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  admin_notes: string | null;
   created_at: string;
-  updated_at: string;
 }
 
 export interface Trade {
@@ -65,11 +62,8 @@ export interface Position {
   id: string;
   user_id: string;
   market_id: string;
-  outcome: 'YES' | 'NO';
-  shares: number;
-  avg_price: number;
-  created_at: string;
-  updated_at: string;
+  yes_shares: number;
+  no_shares: number;
 }
 
 // Helper function to generate unique referral codes
