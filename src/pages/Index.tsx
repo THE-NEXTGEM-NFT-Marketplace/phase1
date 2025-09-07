@@ -1,15 +1,15 @@
 import React, { useEffect } from 'react';
-import { useAppStore } from '../stores/useAppStore';
-import { Layout } from '../components/Layout';
-import { MarketsView } from '../components/Markets/MarketsView';
-import { ProposeMarketView } from '../components/Markets/ProposeMarketView';
-import { TradingView } from '../components/Trading/TradingView';
-import { PortfolioView } from '../components/Portfolio/PortfolioView';
-import { GovernanceView } from '../components/Governance/GovernanceView';
-import { FaucetView } from '../components/Faucet/FaucetView';
-import { ReferralsView } from '../components/Referrals/ReferralsView';
+import { useAppStore } from '@/stores/useAppStore';
+import { Layout } from '@/components/Layout';
+import { MarketsView } from '@/components/Markets/MarketsView';
+import { ProposeMarketView } from '@/components/Markets/ProposeMarketView';
+import { TradingView } from '@/components/Trading/TradingView';
+import { PortfolioView } from '@/components/Portfolio/PortfolioView';
+import { GovernanceView } from '@/components/Governance/GovernanceView';
+import { FaucetView } from '@/components/Faucet/FaucetView';
+import { ReferralsView } from '@/components/Referrals/ReferralsView';
 import { useWallet, ConnectButton } from "@suiet/wallet-kit";
-import { getReferralCodeFromUrl } from '../lib/supabaseClient';
+import { getReferralCodeFromUrl } from '@/lib/supabaseClient';
 
 const Index = () => {
   const { 

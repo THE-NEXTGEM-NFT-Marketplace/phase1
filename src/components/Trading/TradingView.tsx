@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
-import { useAppStore } from '../../stores/useAppStore';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
+import { useAppStore } from '@/stores/useAppStore';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { SimpleChart } from './SimpleChart';
 import { TradingPanel } from './TradingPanel';
 import { format } from 'date-fns';
-import { RealtimeService } from '../../services/supabaseService';
+import { RealtimeService } from '@/services/supabaseService';
 
 export function TradingView() {
   const { currentMarket, setCurrentMarket, setCurrentView, markets, setCurrentMarket: updateCurrentMarket } = useAppStore();

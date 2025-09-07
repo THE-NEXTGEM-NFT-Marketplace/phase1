@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Market, Outcome, useAppStore } from '../../stores/useAppStore';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Market, Outcome, useAppStore } from '@/stores/useAppStore';
 import { useWallet } from "@suiet/wallet-kit";
 import { createGasOnlyTx } from "@/services/suiLfgService";
-import { useToast } from '../../hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import toast from "react-hot-toast";
-import { cn } from '../../lib/utils';
-import { TradingService } from '../../services/supabaseService';
+import { cn } from '@/lib/utils';
+import { TradingService } from '@/services/supabaseService';
 
 interface TradingPanelProps {
   market: Market;

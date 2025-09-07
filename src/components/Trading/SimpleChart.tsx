@@ -1,5 +1,5 @@
 import React from 'react';
-import { Market } from '../../stores/useAppStore';
+import { Market } from '@/stores/useAppStore';
 
 interface SimpleChartProps {
   market: Market;

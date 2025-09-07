@@ -1,6 +1,6 @@
 import React from 'react';
 import { Search, DollarSign } from 'lucide-react';
-import { useAppStore } from '../stores/useAppStore';
+import { useAppStore } from '@/stores/useAppStore';
 import { Input } from './ui/input';
 import { SidebarTrigger } from './ui/sidebar';
 import { useWallet } from "@suiet/wallet-kit";

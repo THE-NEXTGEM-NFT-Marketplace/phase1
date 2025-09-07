@@ -1,9 +1,9 @@
 import React from 'react';
 import { TrendingUp, Clock } from 'lucide-react';
-import { Market } from '../../stores/useAppStore';
-import { Card, CardContent } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { cn } from '../../lib/utils';
+import { Market } from '@/stores/useAppStore';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
 interface MarketCardProps {

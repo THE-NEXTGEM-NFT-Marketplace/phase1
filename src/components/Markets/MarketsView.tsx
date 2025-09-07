@@ -1,9 +1,9 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
-import { useAppStore, MarketCategory } from '../../stores/useAppStore';
+import { useAppStore, MarketCategory } from '@/stores/useAppStore';
 import { MarketCard } from './MarketCard';
-import { Button } from '../ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const categories: MarketCategory[] = ['All', 'Crypto', 'Politics', 'Sports', 'Community'];
 

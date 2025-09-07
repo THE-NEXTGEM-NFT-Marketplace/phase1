@@ -1,8 +1,8 @@
 import React from 'react';
 import { TrendingUp, PieChart, Vote, Wallet, Plus, Minus, Calendar, Coins, Users } from 'lucide-react';
-import { useAppStore } from '../stores/useAppStore';
+import { useAppStore } from '@/stores/useAppStore';
 import { Button } from './ui/button';
-import { cn } from '../lib/utils';
+import { cn } from '@/lib/utils';
 import { ConnectButton, useWallet } from "@suiet/wallet-kit";
 import {
   Sidebar,
