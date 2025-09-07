@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* SuiLFG Prediction Market Design System */
+
+@layer base {
+  :root {
+    /* SuiLFG Dark Theme */
+    --background: 216 15% 8%;  /* #0D1117 */
+    --foreground: 213 20% 92%; /* #E6EDF3 */
+
+    --card: 216 15% 8%;
+    --card-foreground: 213 20% 92%;
+
+    --popover: 216 15% 8%;
+    --popover-foreground: 213 20% 92%;
+
+    --primary: 187 100% 53%; /* #22d3ee - Bright Teal */
+    --primary-foreground: 216 15% 8%;
+
+    --secondary: 215 16% 20%; /* #30363D - Medium Gray */
+    --secondary-foreground: 213 20% 92%;
+
+    --muted: 215 16% 20%;
+    --muted-foreground: 213 12% 65%;
+
+    --accent: 187 100% 53%; /* #22d3ee */
+    --accent-foreground: 216 15% 8%;
+
+    --success: 142 71% 45%; /* #22c55e - Green */
+    --success-foreground: 213 20% 92%;
+
+    --destructive: 0 84% 60%; /* #ef4444 - Red */
+    --destructive-foreground: 213 20% 92%;
+
+    --border: 215 16% 20%;
+    --input: 215 16% 20%;
+    --ring: 187 100% 53%;
+
+    --radius: 0.75rem;
+
+    /* Trading specific colors */
+    --yes-color: 142 71% 45%; /* Green for YES */
+    --no-color: 0 84% 60%; /* Red for NO */
+    --chart-grid: 215 16% 15%;
+    --chart-line: 187 100% 53%;
+
+    /* Status colors */
+    --status-open: 187 100% 53%;
+    --status-resolving: 45 93% 47%;
+    --status-resolved: 142 71% 45%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(187 100% 53%), hsl(187 100% 60%));
+    --gradient-success: linear-gradient(135deg, hsl(142 71% 45%), hsl(142 71% 52%));
+    --gradient-danger: linear-gradient(135deg, hsl(0 84% 60%), hsl(0 84% 67%));
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: all 0.15s ease-out;
+
+    /* Shadows */
+    --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    --shadow-elevated: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+    --shadow-glow: 0 0 30px rgba(34, 211, 238, 0.2);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+  
+  .hover-scale {
+    @apply transition-transform duration-200 hover:scale-105;
+  }
+  
+  .shadow-glow {
+    box-shadow: 0 0 30px rgba(34, 211, 238, 0.2);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
