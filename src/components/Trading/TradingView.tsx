@@ -82,7 +82,7 @@ export function TradingView() {
               Resolution: {format(currentMarket.resolutionDate, 'MMM d, yyyy')}
             </span>
             <span className="text-sm text-muted-foreground">
-              Volume: ${(currentMarket.totalVolume / 1000).toFixed(0)}k
+              Volume: ${((currentMarket.totalVolume || 0) / 1000).toFixed(0)}k
             </span>
           </div>
         </div>

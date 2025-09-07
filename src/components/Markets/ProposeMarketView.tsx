@@ -18,7 +18,6 @@ const proposeMarketSchema = z.object({
   description: z.string().min(20, 'Description must be at least 20 characters').max(500, 'Description must be less than 500 characters'),
   category: z.enum(['Crypto', 'Politics', 'Sports', 'Community']),
   resolutionDate: z.string().min(1, 'Resolution date is required'),
-  initialYesPrice: z.number().min(0.01, 'Initial YES price must be at least 0.01').max(0.99, 'Initial YES price must be less than 0.99'),
 });
 
 type ProposeMarketForm = z.infer<typeof proposeMarketSchema>;
@@ -35,7 +34,6 @@ export function ProposeMarketView() {
       description: '',
       category: 'Community',
       resolutionDate: '',
-      initialYesPrice: 0.5,
     },
   });
 
@@ -66,7 +64,6 @@ export function ProposeMarketView() {
         description: data.description,
         category: data.category,
         resolutionDate,
-        initialYesPrice: data.initialYesPrice,
       });
 
       toast({
@@ -198,28 +195,6 @@ export function ProposeMarketView() {
                   )}
                 />
               </div>
-
-              <FormField
-                control={form.control}
-                name="initialYesPrice"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Initial YES Price (0.01 - 0.99)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        max="0.99"
-                        placeholder="0.50"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
               {!connected && (
                 <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">

@@ -53,11 +53,11 @@ export function MarketCard({ market, onClick }: MarketCardProps) {
           <div className="flex items-center gap-4">
             <div className="text-center">
               <p className="text-xs text-muted-foreground">YES</p>
-              <p className="font-bold text-yes">${market.yesPrice.toFixed(2)}</p>
+              <p className="font-bold text-yes">${(market.yesPrice || 0).toFixed(2)}</p>
             </div>
             <div className="text-center">
               <p className="text-xs text-muted-foreground">NO</p>
-              <p className="font-bold text-no">${market.noPrice.toFixed(2)}</p>
+              <p className="font-bold text-no">${(market.noPrice || 0).toFixed(2)}</p>
             </div>
           </div>
           
@@ -67,7 +67,7 @@ export function MarketCard({ market, onClick }: MarketCardProps) {
               {format(market.resolutionDate, 'MMM d, yyyy')}
             </p>
             <p className="text-xs text-muted-foreground">
-              Vol: ${(market.totalVolume / 1000).toFixed(0)}k
+              Vol: ${((market.totalVolume || 0) / 1000).toFixed(0)}k
             </p>
           </div>
         </div>

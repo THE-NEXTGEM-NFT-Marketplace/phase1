@@ -26,7 +26,7 @@ export function SimpleChart({ market }: SimpleChartProps) {
         <div className="flex items-center gap-4 text-sm">
           <span className="text-muted-foreground">Current:</span>
           <span className={`font-bold ${currentTrend ? 'text-yes' : 'text-no'}`}>
-            ${yesPrice.toFixed(2)}
+            ${(yesPrice || 0).toFixed(2)}
           </span>
         </div>
       </div>
