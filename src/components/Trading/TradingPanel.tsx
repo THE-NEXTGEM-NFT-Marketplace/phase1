@@ -33,7 +33,8 @@ export function TradingPanel({ market }: TradingPanelProps) {
   } = useAppStore();
   const now = Date.now();
   const oneDay = 24 * 60 * 60 * 1000;
-  const canTrade = !!lastClaimTimestamp && (now - lastClaimTimestamp < oneDay);
+  // Unlock trading if user has any USDC; only lock when balance is 0
+  const canTrade = usdcBalance > 0;
 
   const { connected, signAndExecuteTransactionBlock } = useWallet();
 
@@ -148,7 +149,7 @@ export function TradingPanel({ market }: TradingPanelProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            You must claim your daily USDC from the Faucet before you can trade.
+            Your USDC balance is 0. Claim from the Faucet to start trading.
           </p>
           <Button onClick={() => setCurrentView('faucet')}>Go to Faucet</Button>
         </CardContent>
@@ -269,15 +270,7 @@ export function TradingPanel({ market }: TradingPanelProps) {
               </div>
             </div>
 
-            {/* Available Shares */}
-            <div className="bg-secondary/30 rounded-lg p-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Available shares:</span>
-                <span className="font-semibold">{availableShares.toFixed(2)}</span>
-              </div>
-            </div>
-
-            {/* Shares to Sell Input */}
+            {/* Shares Input */}
             <div className="space-y-2">
               <Label htmlFor="sell-shares">Shares to Sell</Label>
               <Input
@@ -288,28 +281,18 @@ export function TradingPanel({ market }: TradingPanelProps) {
                 onChange={(e) => setSellShares(e.target.value)}
                 max={availableShares}
               />
+              <p className="text-xs text-muted-foreground">
+                Available: <span className="font-semibold">{availableShares.toFixed(2)}</span>
+              </p>
             </div>
-
-            {/* Sale Amount Calculation */}
-            {sellShares && (
-              <div className="bg-secondary/30 rounded-lg p-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">You'll receive:</span>
-                  <span className="font-semibold">
-                    ~${(parseFloat(sellShares) * currentPrice).toFixed(2)} USDC
-                  </span>
-                </div>
-              </div>
-            )}
 
             <Button
               onClick={handleSell}
-              variant="outline"
+              variant="default"
               disabled={
-                !sellShares || 
-                parseFloat(sellShares) <= 0 || 
+                !sellShares ||
+                parseFloat(sellShares) <= 0 ||
                 parseFloat(sellShares) > availableShares ||
-                availableShares === 0 ||
                 isLoading
               }
             >
