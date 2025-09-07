@@ -40,8 +40,8 @@ export function TradingPanel({ market }: TradingPanelProps) {
   const currentPrice = selectedOutcome === 'YES' ? market.yesPrice : market.noPrice;
   const sharesReceived = buyAmount ? (parseFloat(buyAmount) / currentPrice) : 0;
 
-  const userPosition = positions.find(p => p.marketId === market.id && p.outcome === selectedOutcome);
-  const availableShares = userPosition?.shares || 0;
+  const userPosition = positions.find(p => p.marketId === market.id);
+  const availableShares = userPosition ? (selectedOutcome === 'YES' ? userPosition.yesShares : userPosition.noShares) : 0;
 
   const handleBuy = async () => {
     if (!connected) {

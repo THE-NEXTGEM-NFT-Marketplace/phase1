@@ -18,12 +18,17 @@ export function TradingView() {
 
     const subscription = RealtimeService.subscribeToMarketUpdates((updatedMarket) => {
       if (updatedMarket.id === currentMarket.id) {
-        // Update the current market with real-time data
+        // Compute prices from totals
+        const totalShares = (updatedMarket.total_yes_shares || 0) + (updatedMarket.total_no_shares || 0);
+        const yesPrice = totalShares > 0 ? (updatedMarket.total_yes_shares || 0) / totalShares : 0.5;
+        const noPrice = totalShares > 0 ? (updatedMarket.total_no_shares || 0) / totalShares : 0.5;
         const updatedMarketData = {
           ...currentMarket,
-          yesPrice: updatedMarket.yes_price,
-          noPrice: updatedMarket.no_price,
-          totalVolume: updatedMarket.total_volume,
+          total_yes_shares: updatedMarket.total_yes_shares,
+          total_no_shares: updatedMarket.total_no_shares,
+          yesPrice,
+          noPrice,
+          totalVolume: totalShares,
           status: updatedMarket.status as any,
         };
         updateCurrentMarket(updatedMarketData);
@@ -78,8 +83,6 @@ export function TradingView() {
           <ArrowLeft className="w-4 h-4 mr-1" />
           Markets
         </Button>
-        <span className="text-muted-foreground">{'>'}</span>
-        <span className="text-muted-foreground">{currentMarket.category}</span>
         <span className="text-muted-foreground">{'>'}</span>
         <span className="font-medium">{currentMarket.title}</span>
       </div>
